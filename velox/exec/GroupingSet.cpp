@@ -136,6 +136,7 @@ std::unique_ptr<GroupingSet> GroupingSet::createForDistinct(
     const RowTypePtr& inputType,
     std::vector<std::unique_ptr<VectorHasher>>&& hashers,
     std::vector<column_index_t>&& preGroupedKeys,
+    const common::SpillConfig* spillConfig,
     OperatorCtx* operatorCtx,
     tsan_atomic<bool>* nonReclaimableSection) {
   return std::make_unique<GroupingSet>(
@@ -149,7 +150,7 @@ std::unique_ptr<GroupingSet> GroupingSet::createForDistinct(
       /*isRawInput=*/false,
       /*globalGroupingSets=*/std::vector<vector_size_t>{},
       /*groupIdColumn=*/std::nullopt,
-      /*spillConfig=*/nullptr,
+      spillConfig,
       nonReclaimableSection,
       &operatorCtx->driverCtx()->queryConfig(),
       operatorCtx->pool(),
@@ -240,7 +241,7 @@ void GroupingSet::addInputForActiveRows(
     const RowVectorPtr& input,
     bool mayPushdown) {
   VELOX_CHECK(!isGlobal_);
-  if (!table_) {
+  if (table_ == nullptr) {
     createHashTable();
   }
   ensureInputFits(input);
